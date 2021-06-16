@@ -1,8 +1,9 @@
-(function() {
+(function () {
     "use strict";
 
-    var desvg = function(selector, removeInlineCss) {
+    var desvg = function (selector, removeInlineCss, removeStyleElements) {
         removeInlineCss = removeInlineCss || false;
+        removeStyleElements = removeStyleElements || false;
 
         var images,
             imagesLength,
@@ -14,11 +15,12 @@
                 var xhr = new XMLHttpRequest();
                 xhr.open('GET', imgURL, true);
 
-                xhr.onload = function() {
+                xhr.onload = function () {
                     var xml,
                         svg,
                         paths,
-                        replaceImagesLength;
+                        replaceImagesLength,
+                        styleElements;
 
                     // get the response in XML format
                     xml = xhr.responseXML;
@@ -32,6 +34,13 @@
                     // this will be the <svg />
                     svg = xml.documentElement;
 
+                    // remove not essentials
+                    svg.removeAttribute('xmlns:a');
+                    svg.removeAttribute('enable-background');
+
+                    // set preserveAspectRatio
+                    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
                     // get all the SVG paths
                     paths = svg.querySelectorAll('path');
 
@@ -41,9 +50,23 @@
                             paths[i].removeAttribute('style');
                         }
                     }
-                    svg.removeAttribute('xmlns:a');
 
-                    while(replaceImagesLength--) {
+                    // ADD! -- remove included style tag
+
+                    styleElements = svg.querySelectorAll('style')
+
+                    if (removeStyleElements) {
+                        // if `removeInlineCss` is true then remove the style attributes from the SVG paths
+                        for (var i = 0; i < styleElements.length; i++) {
+                            try {
+                                styleElements[i].remove();
+                            } catch (e) {
+                                styleElements[i].parentNode.removeChild(styleElements[i]);
+                            }
+                        }
+                    }
+
+                    while (replaceImagesLength--) {
                         replaceImgWithSvg(replaceImages[replaceImagesLength], svg.cloneNode(true));
                     }
                 };
@@ -78,12 +101,12 @@
         // sort images array by image url
         while (imagesLength--) {
             var _img = images[imagesLength],
-              _imgURL;
+                _imgURL;
 
             if (_img.getAttribute('data-src')) {
-              _imgURL = _img.getAttribute('data-src')
+                _imgURL = _img.getAttribute('data-src')
             } else {
-              _imgURL = _img.getAttribute('src')
+                _imgURL = _img.getAttribute('src')
             }
 
             if (sortImages[_imgURL]) {
@@ -95,8 +118,10 @@
 
         // loops over the matched urls
         for (var key in sortImages) {
-            if (sortImages.hasOwnProperty(key)) {
-                loadSvg(key, sortImages[key]);
+            if (key) {
+                if (sortImages.hasOwnProperty(key)) {
+                    loadSvg(key, sortImages[key]);
+                }
             }
         }
 
